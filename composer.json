@@ -1,0 +1,15 @@
+{
+    "name": "suqld/otrs-rest-api",
+    "type": "library",
+    "description": "OTRS REST API Library",
+    "minimum-stability": "stable",
+    "license": "LGPL-3.0",
+    "autoload" : {
+        "psr-4": {
+            "SUQLD\\": "src/SUQLD/"
+        }
+    },
+    "require": {
+        "nategood/httpful": "^0.2.20"
+    }
+}
