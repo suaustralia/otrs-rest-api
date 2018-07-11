@@ -57,7 +57,7 @@ class OtrsRestApi
 
         // This checks for OTRS errors
         if (property_exists($result->body, 'Error')) {
-            throw new \Exception($result->body->Error);
+            throw new \Exception($result->body->Error->ErrorMessage);
         }
 
         // Clear all pending attachments
@@ -159,7 +159,7 @@ class OtrsRestApi
      * @param string $communicationChannel
      * @param array  $extraTicketData
      * @param array  $extraArticleData
-     * @return Response
+     * @return Object
      * @throws \Exception
      */
     public function createTicket(
@@ -210,7 +210,7 @@ class OtrsRestApi
         ];
 
         // Returns the TicketID
-        return $this->send($requestData, 'Ticket');
+        return $this->send($requestData, 'Ticket')->body;
     }
 
     /**
