@@ -32,10 +32,13 @@ class OtrsRestApi
      */
     private function send(array $requestData, $path, $method = 'post')
     {
-        $body = array_merge($requestData, [
-            'UserLogin' => $this->username,
-            'Password' => $this->password
-        ]);
+        $body = array_merge(
+            $requestData,
+            [
+                'UserLogin' => $this->username,
+                'Password'  => $this->password,
+            ]
+        );
 
         if (count($this->pendingAttachments)) {
             $body['Attachment'] = $this->pendingAttachments;
@@ -79,9 +82,10 @@ class OtrsRestApi
         $subject,
         $body,
         $from,
-        $contentType= 'text/plain; charset=ISO-8859-1',
+        $contentType = 'text/plain; charset=ISO-8859-1',
         $communicationChannel = 'Internal',
-        $extraArticleData = []) {
+        $extraArticleData = []
+    ) {
 
         if (strlen(trim($subject)) == 0) {
             throw new \Exception('Need a subject. Subject is empty');
@@ -91,16 +95,21 @@ class OtrsRestApi
         }
 
 
-        $articleBody = array_merge([
-            'Subject' => $subject,
-            'Body' => $body,
-            'CommunicationChannel' => $communicationChannel,
-            'ContentType' => $contentType,
-            "HistoryType", "WebRequestCustomer",
-            "HistoryComment", $createdBy,
-            "SenderType", "system",
-        ],
-            $extraArticleData);
+        $articleBody = array_merge(
+            [
+                'Subject'              => $subject,
+                'Body'                 => $body,
+                'CommunicationChannel' => $communicationChannel,
+                'ContentType'          => $contentType,
+                "HistoryType",
+                "WebRequestCustomer",
+                "HistoryComment",
+                $createdBy,
+                "SenderType",
+                "system",
+            ],
+            $extraArticleData
+        );
 
         if ($from) {
             $articleBody['From'] = $from;
@@ -112,16 +121,22 @@ class OtrsRestApi
                 $articleBody['CommunicationChannel'] = 'Internal';
                 break;
             case 'Internal':
-                $articleBody = array_merge($articleBody, [
-                    "Loop", 0,
-                    "AutoResponseType", 'auto reply',
-                    "OrigHeader", [
-                        'From' => $from,
-                        'To' =>  'Postmaster',
-                        'Subject' => $subject,
-                        'Body' => $body,
+                $articleBody = array_merge(
+                    $articleBody,
+                    [
+                        "Loop",
+                        0,
+                        "AutoResponseType",
+                        'auto reply',
+                        "OrigHeader",
+                        [
+                            'From'    => $from,
+                            'To'      => 'Postmaster',
+                            'Subject' => $subject,
+                            'Body'    => $body,
+                        ],
                     ]
-                ]);
+                );
                 break;
         }
 
@@ -133,6 +148,7 @@ class OtrsRestApi
      *
      * Create a new ticket using the TicketCreate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketCreate.pm.html
+     *
      * @param        $title
      * @param        $queue
      * @param        $customer
@@ -154,16 +170,15 @@ class OtrsRestApi
         $subject,
         $body,
         $from,
-        $contentType= 'text/plain; charset=ISO-8859-1',
+        $contentType = 'text/plain; charset=ISO-8859-1',
         $communicationChannel = 'Internal',
         $extraTicketData = [],
         $extraArticleData = []
-        )
-    {
+    ) {
         $ticketDefaults = [
-            'LockState' => 'unlock',
+            'LockState'  => 'unlock',
             'PriorityID' => 2,
-            'State' => 'new',
+            'State'      => 'new',
         ];
         if (strlen(trim($title)) == 0) {
             throw new \Exception('Need a title. Title is empty');
@@ -179,10 +194,18 @@ class OtrsRestApi
             $ticketBody['Queue'] = $queue;
         }
 
-        $articleBody = $this->generateArticleBody($title, $subject, $body, $from, $contentType, $communicationChannel, $extraArticleData);
+        $articleBody = $this->generateArticleBody(
+            $title,
+            $subject,
+            $body,
+            $from,
+            $contentType,
+            $communicationChannel,
+            $extraArticleData
+        );
 
         $requestData = [
-            "Ticket" => $ticketBody,
+            "Ticket"  => $ticketBody,
             "Article" => $articleBody,
         ];
 
@@ -193,6 +216,7 @@ class OtrsRestApi
     /**
      * Add an article to an existing ticket. It uses the TicketUpdate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketUpdate.pm.html
+     *
      * @param        $ticketID
      * @param        $createdBy
      * @param        $subject
@@ -212,23 +236,30 @@ class OtrsRestApi
         $subject,
         $body,
         $from,
-        $contentType= 'text/plain; charset=ISO-8859-1',
+        $contentType = 'text/plain; charset=ISO-8859-1',
         $communicationChannel = 'Internal',
         $extraArticleData = []
-    )
-    {
+    ) {
         if (!is_int($ticketID)) {
             throw new \Exception('TicketID needs to be an integer');
         }
 
-        $articleBody = $this->generateArticleBody($createdBy, $subject, $body, $from, $contentType, $communicationChannel, $extraArticleData);
+        $articleBody = $this->generateArticleBody(
+            $createdBy,
+            $subject,
+            $body,
+            $from,
+            $contentType,
+            $communicationChannel,
+            $extraArticleData
+        );
 
         $requestData = [
             "TicketID" => $ticketID,
-            "Ticket" => [
-                'State' => 'open'
+            "Ticket"   => [
+                'State' => 'open',
             ],
-            "Article" => $articleBody,
+            "Article"  => $articleBody,
         ];
 
         return $this->send($requestData, 'Ticket/' . $ticketID, 'patch');
@@ -236,6 +267,7 @@ class OtrsRestApi
 
     /**
      * Attach file to next request (createTicket/updateTicket)
+     *
      * @param string $filePath
      * @param string $fileName
      * @param string $mimeType
@@ -243,14 +275,15 @@ class OtrsRestApi
     public function attachFileToNextRequest($filePath, $fileName, $mimeType)
     {
         $this->pendingAttachments[] = [
-            'Content' => base64_encode(file_get_contents($filePath)),
+            'Content'     => base64_encode(file_get_contents($filePath)),
             'ContentType' => $mimeType,
-            'Filename' => $fileName
+            'Filename'    => $fileName,
         ];
     }
 
     /**
      * Get the Ticket Number
+     *
      * @param int $TicketID
      * @return string
      */
@@ -265,11 +298,17 @@ class OtrsRestApi
 
     /**
      * Get Ticket Information
+     *
+     * @param      $TicketID
+     * @param bool $Extended
+     * @return object
+     * @throws \Exception
      */
     public function getTicket($TicketID, $Extended = false)
     {
         $requestBody = [
-            'Extended', (int)$Extended,
+            'Extended',
+            (int) $Extended,
         ];
 
         $response = $this->send($requestBody, 'Ticket/' . $TicketID, 'get');
