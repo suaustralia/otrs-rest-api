@@ -209,7 +209,6 @@ class OtrsRestApi
             "Article" => $articleBody,
         ];
 
-        // Returns the TicketID
         return $this->send($requestData, 'Ticket')->body;
     }
 
