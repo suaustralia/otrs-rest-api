@@ -314,4 +314,16 @@ class OtrsRestApi
 
         return $response->body->Ticket[0];
     }
+
+    /**
+     * Creates a new Session and returns the SessionID. Useful to check if the login works
+     *
+     * @return string
+     * @throws \Exception
+     */
+    public function sessionCreate()
+    {
+        $response = $this->send([], 'Session', 'post');
+        return $response->body->SessionID;
+    }
 } 
