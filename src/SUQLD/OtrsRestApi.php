@@ -40,12 +40,21 @@ class OtrsRestApi
             ]
         );
 
-        if (count($this->pendingAttachments)) {
-            $body['Attachment'] = $this->pendingAttachments;
+        /* GET method can't have a body so we have to send all data in the parameters
+         * thanks to the invalid bug fix at https://bugs.otrs.org/show_bug.cgi?id=14203
+         */
+        if ($method === 'get') {
+            $requestUrl = $this->url . $path . '?' . http_build_query($body);
+            $body = null;
+        } else {
+            $requestUrl = $this->url . $path;
+            if (count($this->pendingAttachments)) {
+                $body['Attachment'] = $this->pendingAttachments;
+            }
         }
 
         /** @var Response $result */
-        $result = Request::$method($this->url . $path)
+        $result = Request::$method($requestUrl)
             ->body($body)
             ->sendsJson()
             ->send();
