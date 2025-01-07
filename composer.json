@@ -10,6 +10,11 @@
         }
     },
     "require": {
-        "nategood/httpful": "^0.2.20"
+        "nategood/httpful": "^1.0",
+        "php": "^8.0"
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest",
+        "rector/rector": "^2.0"
     }
 }

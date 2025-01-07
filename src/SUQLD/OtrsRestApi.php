@@ -2,23 +2,28 @@
 
 namespace SUQLD;
 
+use Exception;
 use Httpful\Request;
 use Httpful\Response;
 
+/**
+ * Znuny/OTRS Rest API
+ */
 class OtrsRestApi
 {
 
-    private $url;
-    private $username;
-    private $password;
+    private array $pendingAttachments = [];
 
-    private $pendingAttachments = [];
-
-    public function __construct($url, $username, $password)
-    {
-        $this->url = $url;
-        $this->username = $username;
-        $this->password = $password;
+    /**
+     * @param string $url
+     * @param string $username
+     * @param string $password
+     */
+    public function __construct(
+        private readonly string $url,
+        private readonly string $username,
+        private readonly string $password
+    ) {
     }
 
     /**
@@ -28,9 +33,9 @@ class OtrsRestApi
      * @param string $path
      * @param string $method post|get|patch etc
      * @return Response
-     * @throws \Exception
+     * @throws Exception
      */
-    private function send(array $requestData, $path, $method = 'post')
+    private function send(array $requestData, string $path, string $method = 'post'): Response
     {
         $body = array_merge(
             $requestData,
@@ -61,12 +66,12 @@ class OtrsRestApi
 
         // This checks for an issue with the HTTP request, not an error from OTRS
         if ($result->hasErrors()) {
-            throw new \Exception($result);
+            throw new Exception($result);
         }
 
         // This checks for OTRS errors
         if (property_exists($result->body, 'Error')) {
-            throw new \Exception($result->body->Error->ErrorMessage);
+            throw new Exception($result->body->Error->ErrorMessage);
         }
 
         // Clear all pending attachments
@@ -76,31 +81,31 @@ class OtrsRestApi
     }
 
     /**
-     * @param        $createdBy
-     * @param        $subject
-     * @param        $body
-     * @param        $from
+     * @param string $createdBy
+     * @param string $subject
+     * @param string $body
+     * @param string $from
      * @param string $contentType
      * @param string $communicationChannel
-     * @param array  $extraArticleData
+     * @param array $extraArticleData
      * @return array
-     * @throws \Exception
+     * @throws Exception
      */
     private function generateArticleBody(
-        $createdBy,
-        $subject,
-        $body,
-        $from,
-        $contentType = 'text/plain; charset=ISO-8859-1',
-        $communicationChannel = 'Internal',
-        $extraArticleData = []
-    ) {
+        string $createdBy,
+        string $subject,
+        string $body,
+        string $from,
+        string $contentType = 'text/plain; charset=ISO-8859-1',
+        string $communicationChannel = 'Internal',
+        array $extraArticleData = []
+    ): array {
 
         if (strlen(trim($subject)) == 0) {
-            throw new \Exception('Need a subject. Subject is empty');
+            throw new Exception('Need a subject. Subject is empty');
         }
         if (strlen(trim($body)) == 0) {
-            throw new \Exception('Need a body. Body is empty');
+            throw new Exception('Need a body. Body is empty');
         }
 
 
@@ -158,39 +163,39 @@ class OtrsRestApi
      * Create a new ticket using the TicketCreate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketCreate.pm.html
      *
-     * @param        $title
-     * @param        $queue
-     * @param        $customer
-     * @param        $subject
-     * @param        $body
-     * @param        $from
+     * @param string $title
+     * @param int|string|numeric $queue
+     * @param string $customer
+     * @param string $subject
+     * @param string $body
+     * @param string $from
      * @param string $contentType
      * @param string $communicationChannel
-     * @param array  $extraTicketData
-     * @param array  $extraArticleData
-     * @return Object
-     * @throws \Exception
+     * @param array $extraTicketData
+     * @param array $extraArticleData
+     * @return array|string|object
+     * @throws Exception
      */
     public function createTicket(
-        $title,
-        $queue, // ID or String
-        $customer, // string
+        string $title,
+        float|int|string $queue, // ID or String
+        string $customer, // string
         // Article parts
-        $subject,
-        $body,
-        $from,
-        $contentType = 'text/plain; charset=ISO-8859-1',
-        $communicationChannel = 'Internal',
-        $extraTicketData = [],
-        $extraArticleData = []
-    ) {
+        string $subject,
+        string $body,
+        string $from,
+        string $contentType = 'text/plain; charset=ISO-8859-1',
+        string $communicationChannel = 'Internal',
+        array $extraTicketData = [],
+        array $extraArticleData = []
+    ): array|string|object {
         $ticketDefaults = [
             'LockState'  => 'unlock',
             'PriorityID' => 2,
             'State'      => 'new',
         ];
         if (strlen(trim($title)) == 0) {
-            throw new \Exception('Need a title. Title is empty');
+            throw new Exception('Need a title. Title is empty');
         }
 
 
@@ -225,32 +230,29 @@ class OtrsRestApi
      * Add an article to an existing ticket. It uses the TicketUpdate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketUpdate.pm.html
      *
-     * @param        $ticketID
-     * @param        $createdBy
-     * @param        $subject
-     * @param        $body
-     * @param        $from
+     * @param int $ticketID
+     * @param string $createdBy
+     * @param string $subject
+     * @param string $body
+     * @param string $from
      * @param string $contentType
      * @param string $communicationChannel
-     * @param array  $extraArticleData
+     * @param array $extraArticleData
      * @return Response
-     * @throws \Exception
-     *
+     * @throws Exception
      */
     public function addArticle(
-        $ticketID,
-        $createdBy,
+        int $ticketID,
+        string $createdBy,
         // Article parts
-        $subject,
-        $body,
-        $from,
-        $contentType = 'text/plain; charset=ISO-8859-1',
-        $communicationChannel = 'Internal',
-        $extraArticleData = []
-    ) {
-        if (!is_int($ticketID)) {
-            throw new \Exception('TicketID needs to be an integer');
-        }
+        string $subject,
+        string $body,
+        string $from,
+        string $contentType = 'text/plain; charset=ISO-8859-1',
+        string $communicationChannel = 'Internal',
+        array $extraArticleData = []
+    ): Response
+    {
 
         $articleBody = $this->generateArticleBody(
             $createdBy,
@@ -280,7 +282,7 @@ class OtrsRestApi
      * @param string $fileName
      * @param string $mimeType
      */
-    public function attachFileToNextRequest($filePath, $fileName, $mimeType)
+    public function attachFileToNextRequest(string $filePath, string $fileName, string $mimeType): void
     {
         $this->pendingAttachments[] = [
             'Content'     => base64_encode(file_get_contents($filePath)),
@@ -293,26 +295,25 @@ class OtrsRestApi
      * Get the Ticket Number
      *
      * @param int $TicketID
-     * @return string
+     * @return string TicketNumber
+     * @throws Exception
      */
-    public function getTicketNumber($TicketID)
+    public function getTicketNumber(int $TicketID): string
     {
         $ticket = $this->getTicket($TicketID);
 
-        $TicketNumber = number_format($ticket->TicketNumber, 0, '.', '');
-
-        return $TicketNumber;
+        return number_format($ticket->TicketNumber, 0, '.', '');
     }
 
     /**
      * Get Ticket Information
      *
-     * @param      $TicketID
+     * @param int $TicketID
      * @param bool $Extended
-     * @return object
-     * @throws \Exception
+     * @return mixed
+     * @throws Exception
      */
-    public function getTicket($TicketID, $Extended = false)
+    public function getTicket(int $TicketID, bool $Extended = false): mixed
     {
         $requestBody = [
             'Extended',
@@ -328,11 +329,11 @@ class OtrsRestApi
      * Creates a new Session and returns the SessionID. Useful to check if the login works
      *
      * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-    public function sessionCreate()
+    public function sessionCreate(): string
     {
         $response = $this->send([], 'Session', 'post');
         return $response->body->SessionID;
     }
-} 
+}
