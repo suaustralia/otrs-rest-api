@@ -230,14 +230,14 @@ class OtrsRestApi
      * Add an article to an existing ticket. It uses the TicketUpdate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketUpdate.pm.html
      *
-     * @param int $ticketID
-     * @param string $createdBy
-     * @param string $subject
-     * @param string $body
-     * @param string $from
-     * @param string $contentType
-     * @param string $communicationChannel
-     * @param array $extraArticleData
+     * @param int         $ticketID
+     * @param string      $createdBy
+     * @param string      $subject
+     * @param string      $body
+     * @param string|null $from
+     * @param string      $contentType
+     * @param string      $communicationChannel
+     * @param array       $extraArticleData
      * @return Response
      * @throws Exception
      */
@@ -247,7 +247,7 @@ class OtrsRestApi
         // Article parts
         string $subject,
         string $body,
-        string $from,
+        string|null $from,
         string $contentType = 'text/plain; charset=ISO-8859-1',
         string $communicationChannel = 'Internal',
         array $extraArticleData = []
