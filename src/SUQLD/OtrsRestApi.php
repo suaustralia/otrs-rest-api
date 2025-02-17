@@ -81,13 +81,13 @@ class OtrsRestApi
     }
 
     /**
-     * @param string $createdBy
-     * @param string $subject
-     * @param string $body
-     * @param string $from
-     * @param string $contentType
-     * @param string $communicationChannel
-     * @param array $extraArticleData
+     * @param string      $createdBy
+     * @param string      $subject
+     * @param string      $body
+     * @param string|null $from
+     * @param string      $contentType
+     * @param string      $communicationChannel
+     * @param array       $extraArticleData
      * @return array
      * @throws Exception
      */
@@ -95,7 +95,7 @@ class OtrsRestApi
         string $createdBy,
         string $subject,
         string $body,
-        string $from,
+        string|null $from,
         string $contentType = 'text/plain; charset=ISO-8859-1',
         string $communicationChannel = 'Internal',
         array $extraArticleData = []
@@ -163,16 +163,16 @@ class OtrsRestApi
      * Create a new ticket using the TicketCreate API
      * http://doc.otrs.com/doc/api/otrs/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketCreate.pm.html
      *
-     * @param string $title
+     * @param string             $title
      * @param int|string|numeric $queue
-     * @param string $customer
-     * @param string $subject
-     * @param string $body
-     * @param string $from
-     * @param string $contentType
-     * @param string $communicationChannel
-     * @param array $extraTicketData
-     * @param array $extraArticleData
+     * @param string             $customer
+     * @param string             $subject
+     * @param string             $body
+     * @param string|null        $from
+     * @param string             $contentType
+     * @param string             $communicationChannel
+     * @param array              $extraTicketData
+     * @param array              $extraArticleData
      * @return array|string|object
      * @throws Exception
      */
@@ -183,7 +183,7 @@ class OtrsRestApi
         // Article parts
         string $subject,
         string $body,
-        string $from,
+        string|null $from,
         string $contentType = 'text/plain; charset=ISO-8859-1',
         string $communicationChannel = 'Internal',
         array $extraTicketData = [],
