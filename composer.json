@@ -1,12 +1,12 @@
 {
-    "name": "suqld/otrs-rest-api",
+    "name": "suaustralia/otrs-rest-api",
     "type": "library",
-    "description": "OTRS REST API Library",
+    "description": "OTRS/Znuny REST API Library",
     "minimum-stability": "stable",
     "license": "LGPL-3.0",
     "autoload" : {
         "psr-4": {
-            "SUQLD\\": "src/SUQLD/"
+            "SUA\\Otrs\\": "src/"
         }
     },
     "require": {
