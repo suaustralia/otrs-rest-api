@@ -14,7 +14,7 @@ return RectorConfig::configure()
     ->withComposerBased()
     ->withAttributesSets()
     ->withSets([
-        LevelSetList::UP_TO_PHP_81,
+        LevelSetList::UP_TO_PHP_82,
     ])
     ->withPaths([
         __DIR__ . '/src',

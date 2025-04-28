@@ -3,27 +3,37 @@
 namespace SUA\Otrs;
 
 use Exception;
-use Httpful\Request;
-use Httpful\Response;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Znuny Rest API
  */
 class OtrsRestApi
 {
+    private readonly HttpClientInterface $httpClient;
     private array $pendingAttachments = [];
 
     public function __construct(
-        private readonly string $url,
+        string $url,
         private readonly string $username,
         private readonly string $password,
     ) {
+        $this->httpClient = HttpClient::createForBaseUri($url);
     }
 
     /**
      * Create a new ticket using the TicketCreate API
      * See http://doc.znuny.com/doc/api/znuny/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketCreate.pm.html
      *
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      * @throws Exception
      */
     public function createTicket(
@@ -38,7 +48,7 @@ class OtrsRestApi
         ?int $queueId = null,
         array $extraTicketData = [],
         array $extraArticleData = [],
-    ): array|string|object {
+    ): array {
         if (strlen(trim($title)) === 0) {
             throw new Exception('Need a title. Title is empty');
         }
@@ -72,13 +82,26 @@ class OtrsRestApi
             'Article' => $articleBody,
         ];
 
-        return $this->send($requestData, 'Ticket')->body;
+        return $this->send($requestData, 'Ticket', 'POST');
     }
 
     /**
      * Add an article to an existing ticket. It uses the TicketUpdate API
      * http://doc.znuny.com/doc/api/znuny/6.0/Perl/Kernel/GenericInterface/Operation/Ticket/TicketUpdate.pm.html
      *
+     * @param int         $ticketId
+     * @param string      $createdBy
+     * @param string      $subject
+     * @param string      $body
+     * @param string|null $from
+     * @param string      $contentType
+     * @param string      $communicationChannel
+     * @param array       $extraArticleData
+     *
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      * @throws Exception
      */
     public function addArticle(
@@ -90,7 +113,7 @@ class OtrsRestApi
         string $contentType = 'text/plain; charset=ISO-8859-1',
         string $communicationChannel = 'Internal',
         array $extraArticleData = [],
-    ): Response {
+    ): void {
         $articleBody = $this->generateArticleBody(
             $createdBy,
             $subject,
@@ -109,7 +132,7 @@ class OtrsRestApi
             'Article'  => $articleBody,
         ];
 
-        return $this->send($requestData, 'Ticket/' . $ticketId, 'patch');
+        $this->send($requestData, 'Ticket/' . $ticketId, 'PATCH');
     }
 
     /**
@@ -127,47 +150,56 @@ class OtrsRestApi
     /**
      * Get the ticket number
      *
-     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
     public function getTicketNumber(int $ticketId): string
     {
         $ticket = $this->getTicket($ticketId);
 
-        return number_format($ticket->TicketNumber, 0, '.', '');
+        return number_format($ticket['ticketNumber'], 0, '.', '');
     }
 
     /**
      * Get ticket information
      *
-     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
-    public function getTicket(int $ticketId, bool $extended = false): mixed
+    public function getTicket(int $ticketId, bool $extended = false): array
     {
-        $response = $this->send(['Extended', (int) $extended], 'Ticket/' . $ticketId, 'get');
-
-        return $response->body->Ticket[0];
+        return $this->send(['Extended' => (int) $extended], 'Ticket/' . $ticketId, 'GET')['ticket'][0];
     }
 
     /**
      * Creates a new Session and returns the SessionID. Useful to check if the login works
      *
-     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
      */
     public function sessionCreate(): string
     {
-        $response = $this->send([], 'Session');
-
-        return $response->body->SessionID;
+        return $this->send([], 'Session', 'POST')['sessionId'];
     }
 
     /**
      * Send the data to the ticket system and process the response
      *
-     * @param string $method post|get|patch
+     * @param string $method POST|GET|PATCH
      *
+     * @throws TransportExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
      * @throws Exception
      */
-    private function send(array $requestData, string $path, string $method = 'post'): Response
+    private function send(array $requestData, string $path, string $method): array
     {
         $body = array_merge(
             $requestData,
@@ -181,36 +213,33 @@ class OtrsRestApi
          * GET method can't have a body, so we have to send all data in the parameters
          * thanks to the invalid bug fix at https://bugs.znuny.org/show_bug.cgi?id=14203
          */
-        if ($method === 'get') {
-            $requestUrl = $this->url . $path . '?' . http_build_query($body);
-            $body = null;
+        if ($method === 'GET') {
+            $requestUrl = $path . '?' . http_build_query($body);
+            $result = $this->httpClient->request($method, $requestUrl);
         } else {
-            $requestUrl = $this->url . $path;
+            $requestUrl = $path;
             if (count($this->pendingAttachments)) {
                 $body['Attachment'] = $this->pendingAttachments;
             }
+            $result = $this->httpClient->request($method, $requestUrl, ['json' => $body]);
         }
 
-        /** @var Response $result */
-        $result = Request::$method($requestUrl)
-            ->body($body)
-            ->sendsJson()
-            ->send();
-
+        $responseBody = $result->getContent(throw: false);
         // this checks for an issue with the HTTP request, not an error from Znuny
-        if ($result->hasErrors()) {
-            throw new Exception($result);
+        if ($result->getStatusCode() >= 400) {
+            throw new Exception($responseBody);
         }
 
         // this checks for Znuny errors
-        if (property_exists($result->body, 'Error')) {
-            throw new Exception($result->body->Error->ErrorMessage);
+        $responseValues = $this->normalizeResponse(json_decode($responseBody, true));
+        if (isset($responseValues['error'])) {
+            throw new Exception($responseValues['error']['errorMessage']);
         }
 
         // clear all pending attachments
         $this->pendingAttachments = [];
 
-        return $result;
+        return $responseValues;
     }
 
     /**
@@ -239,12 +268,9 @@ class OtrsRestApi
                 'Body'                 => $body,
                 'CommunicationChannel' => $communicationChannel,
                 'ContentType'          => $contentType,
-                'HistoryType',
-                'WebRequestCustomer',
-                'HistoryComment',
-                $createdBy,
-                'SenderType',
-                'system',
+                'HistoryType'          => 'WebRequestCustomer',
+                'HistoryComment'       => $createdBy,
+                'SenderType'           => 'system',
             ],
             $extraArticleData
         );
@@ -262,12 +288,9 @@ class OtrsRestApi
                 $articleBody = array_merge(
                     $articleBody,
                     [
-                        'Loop',
-                        0,
-                        'AutoResponseType',
-                        'auto reply',
-                        'OrigHeader',
-                        [
+                        'Loop'             => 0,
+                        'AutoResponseType' => 'auto reply',
+                        'OrigHeader'       => [
                             'From'    => $from,
                             'To'      => 'Postmaster',
                             'Subject' => $subject,
@@ -279,5 +302,23 @@ class OtrsRestApi
         }
 
         return $articleBody;
+    }
+
+    private function normalizeResponse(array $body): array
+    {
+        $newBody = [];
+        foreach ($body as $key => $value) {
+            $newKey = is_int($key) ? $key : $this->fixCamelCase($key);
+            $newBody[$newKey] = is_array($value) ? $this->normalizeResponse($value) : $value;
+        }
+
+        return $newBody;
+    }
+
+    private function fixCamelCase(string $string): string
+    {
+        $string = (string) preg_replace('/([a-z])ID/', '$1Id', $string);
+
+        return strtolower(substr($string, 0, 1)) . substr($string, 1);
     }
 }

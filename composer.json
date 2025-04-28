@@ -10,8 +10,8 @@
         }
     },
     "require": {
-        "nategood/httpful": "^1.0",
-        "php": "^8.1"
+        "php": "^8.2",
+        "symfony/http-client": "~6.4.0"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
