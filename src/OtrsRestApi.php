@@ -15,15 +15,14 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 class OtrsRestApi
 {
-    private readonly HttpClientInterface $httpClient;
+    private ?HttpClientInterface $httpClient = null;
     private array $pendingAttachments = [];
 
     public function __construct(
-        string $url,
+        private readonly string $url,
         private readonly string $username,
         private readonly string $password,
     ) {
-        $this->httpClient = HttpClient::createForBaseUri($url);
     }
 
     /**
@@ -215,13 +214,13 @@ class OtrsRestApi
          */
         if ($method === 'GET') {
             $requestUrl = $path . '?' . http_build_query($body);
-            $result = $this->httpClient->request($method, $requestUrl);
+            $result = $this->getHttpClient()->request($method, $requestUrl);
         } else {
             $requestUrl = $path;
             if (count($this->pendingAttachments)) {
                 $body['Attachment'] = $this->pendingAttachments;
             }
-            $result = $this->httpClient->request($method, $requestUrl, ['json' => $body]);
+            $result = $this->getHttpClient()->request($method, $requestUrl, ['json' => $body]);
         }
 
         $responseBody = $result->getContent(throw: false);
@@ -320,5 +319,14 @@ class OtrsRestApi
         $string = (string) preg_replace('/([a-z])ID/', '$1Id', $string);
 
         return strtolower(substr($string, 0, 1)) . substr($string, 1);
+    }
+
+    private function getHttpClient(): HttpClientInterface
+    {
+        if (!$this->httpClient) {
+            $this->httpClient = HttpClient::createForBaseUri($this->url);
+        }
+
+        return $this->httpClient;
     }
 }
