@@ -15,13 +15,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 class OtrsRestApi
 {
-    private ?HttpClientInterface $httpClient = null;
     private array $pendingAttachments = [];
 
     public function __construct(
         private readonly string $url,
         private readonly string $username,
         private readonly string $password,
+        private ?HttpClientInterface $httpClient = null,
     ) {
     }
 
